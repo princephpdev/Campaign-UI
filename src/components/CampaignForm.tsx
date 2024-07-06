@@ -8,10 +8,11 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { DesktopDatePicker } from "@mui/x-date-pickers/DesktopDatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFnsV3";
 import { createCampaign, updateCampaign } from "../services/campaignService";
+import { format } from "date-fns";
 
 interface CampaignFormProps {
   campaign?: Campaign | null;
@@ -29,6 +30,7 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSuccess }) => {
   const [schedules, setSchedules] = useState<Schedule[]>(
     campaign?.schedules || []
   );
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (campaign) {
@@ -43,6 +45,11 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSuccess }) => {
     setSchedules([...schedules, { dayOfWeek: "", startTime: "", endTime: "" }]);
   };
 
+  const handleRemoveSchedule = (index: number) => {
+    const newSchedules = schedules.filter((_, i) => i !== index);
+    setSchedules(newSchedules);
+  };
+
   const handleScheduleChange = (
     index: number,
     field: string,
@@ -53,13 +60,28 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSuccess }) => {
     setSchedules(newSchedules);
   };
 
+  const validateSchedules = () => {
+    for (const schedule of schedules) {
+      if (!schedule.dayOfWeek || !schedule.startTime || !schedule.endTime) {
+        setError("All schedule fields must be filled out.");
+        return false;
+      }
+    }
+    setError(null);
+    return true;
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
+    if (!validateSchedules()) {
+      return;
+    }
+
     const newCampaign: Campaign = {
       type,
-      startDate: startDate!.toISOString(),
-      endDate: endDate!.toISOString(),
+      startDate: format(startDate!, "yyyy-MM-dd"),
+      endDate: format(endDate!, "yyyy-MM-dd"),
       schedules,
     };
 
@@ -77,6 +99,11 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSuccess }) => {
       <Typography variant="h5" gutterBottom>
         {campaign ? "Edit Campaign" : "Create Campaign"}
       </Typography>
+      {error && (
+        <Typography color="error" gutterBottom>
+          {error}
+        </Typography>
+      )}
       <TextField
         select
         label="Type"
@@ -90,21 +117,27 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSuccess }) => {
         <MenuItem value="Buy One Get One">Buy One Get One</MenuItem>
       </TextField>
       <LocalizationProvider dateAdapter={AdapterDateFns}>
-        <DatePicker
+        <DesktopDatePicker
           label="Start Date"
           value={startDate}
           onChange={(date) => setStartDate(date)}
+          // renderInput={(params) => (
+          //   <TextField {...params} fullWidth margin="normal" />
+          // )}
         />
-        <DatePicker
+        <DesktopDatePicker
           label="End Date"
           value={endDate}
           onChange={(date) => setEndDate(date)}
+          // renderInput={(params) => (
+          //   <TextField {...params} fullWidth margin="normal" />
+          // )}
         />
       </LocalizationProvider>
       {schedules.map((schedule, index) => (
         <Box key={index} sx={{ mt: 2 }}>
           <Grid container spacing={2}>
-            <Grid item xs={4}>
+            <Grid item xs={3}>
               <TextField
                 select
                 label="Day of Week"
@@ -123,7 +156,7 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSuccess }) => {
                 <MenuItem value="Sunday">Sunday</MenuItem>
               </TextField>
             </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={3}>
               <TextField
                 label="Start Time"
                 type="time"
@@ -135,7 +168,7 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSuccess }) => {
                 InputLabelProps={{ shrink: true }}
               />
             </Grid>
-            <Grid item xs={4}>
+            <Grid item xs={3}>
               <TextField
                 label="End Time"
                 type="time"
@@ -146,6 +179,15 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSuccess }) => {
                 fullWidth
                 InputLabelProps={{ shrink: true }}
               />
+            </Grid>
+            <Grid item xs={3} sx={{ display: "flex", alignItems: "center" }}>
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={() => handleRemoveSchedule(index)}
+              >
+                Remove
+              </Button>
             </Grid>
           </Grid>
         </Box>
