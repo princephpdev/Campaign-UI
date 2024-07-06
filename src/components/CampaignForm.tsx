@@ -7,6 +7,8 @@ import {
   MenuItem,
   TextField,
   Typography,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { DesktopDatePicker } from "@mui/x-date-pickers/DesktopDatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
@@ -31,6 +33,7 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSuccess }) => {
     campaign?.schedules || []
   );
   const [error, setError] = useState<string | null>(null);
+  const [openSnackbar, setOpenSnackbar] = useState<boolean>(false);
 
   useEffect(() => {
     if (campaign) {
@@ -85,13 +88,27 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSuccess }) => {
       schedules,
     };
 
-    if (campaign && campaign.id) {
-      await updateCampaign(campaign.id, newCampaign);
-    } else {
-      await createCampaign(newCampaign);
-    }
+    try {
+      if (campaign && campaign.id) {
+        await updateCampaign(campaign.id, newCampaign);
+      } else {
+        await createCampaign(newCampaign);
+      }
 
-    onSuccess();
+      onSuccess();
+    } catch (error: any) {
+      if (error.response && error.response.status === 400) {
+        setError(error.response.data.message || "An error occurred");
+        setOpenSnackbar(true);
+      } else {
+        setError("An unexpected error occurred");
+        setOpenSnackbar(true);
+      }
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setOpenSnackbar(false);
   };
 
   return (
@@ -99,11 +116,11 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSuccess }) => {
       <Typography variant="h5" gutterBottom>
         {campaign ? "Edit Campaign" : "Create Campaign"}
       </Typography>
-      {error && (
+      {/* {error && (
         <Typography color="error" gutterBottom>
           {error}
         </Typography>
-      )}
+      )} */}
       <TextField
         select
         label="Type"
@@ -202,6 +219,19 @@ const CampaignForm: React.FC<CampaignFormProps> = ({ campaign, onSuccess }) => {
           {campaign ? "Update Campaign" : "Create Campaign"}
         </Button>
       </Box>
+      <Snackbar
+        open={openSnackbar}
+        autoHideDuration={6000}
+        onClose={handleCloseSnackbar}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity="error"
+          sx={{ width: "100%" }}
+        >
+          {error}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
